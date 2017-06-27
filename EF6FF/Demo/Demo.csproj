@@ -49,11 +49,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Customer.cs" />
-    <Compile Include="IdGenerator.cs" />
-    <Compile Include="MyDatabase.cs" />
-    <Compile Include="Order.cs" />
-    <Compile Include="PerformanceScope.cs" />
+    <Compile Include="EntityFrameworkModel\Customer.cs" />
+    <Compile Include="Helpers\IdGenerator.cs" />
+    <Compile Include="EntityFrameworkModel\MyDatabase.cs" />
+    <Compile Include="EntityFrameworkModel\Order.cs" />
+    <Compile Include="Helpers\PerformanceScope.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -16,6 +16,11 @@ namespace Demo
 
         static void Main(string[] args)
         {
+            PerformanceTest();
+        }
+
+        private static void PerformanceTest()
+        {
             var customerIds = new IdGenerator();
             var orderIds = new IdGenerator();
             using (var db = new MyDatabase())
@@ -40,28 +45,20 @@ namespace Demo
                 db.SaveChanges();
             }
 
-            ExecuteTest(customerIds, orderIds,"0% loaded",false);
-            ExecuteTest(customerIds, orderIds, "0% loaded", true);
-            ExecuteTest(customerIds, orderIds, "50% loaded", false, (db) =>
+            ExecutePerformanceTest(customerIds, orderIds, "0% loaded", false);
+            ExecutePerformanceTest(customerIds, orderIds, "0% loaded", true);
+            ExecutePerformanceTest(customerIds, orderIds, "50% loaded", false, (db) =>
             {
                 db.Customers.Take(customerIds.All().Count() / 2).ToArray();
                 db.Orders.Take(orderIds.All().Count() / 2).ToArray();
-
             });
-            ExecuteTest(customerIds, orderIds, "50% loaded", true, (db) =>
+            ExecutePerformanceTest(customerIds, orderIds, "50% loaded", true, (db) =>
             {
                 db.Customers.Take(customerIds.All().Count() / 2).ToArray();
                 db.Orders.Take(orderIds.All().Count() / 2).ToArray();
-
             });
-            ExecuteTest(customerIds, orderIds, "100% loaded", false, (db) =>
-            {
-                db.Customers.Include(z => z.Orders).ToArray();
-            });
-            ExecuteTest(customerIds, orderIds, "100% loaded", true, (db) =>
-            {
-                db.Customers.Include(z => z.Orders).ToArray();
-            });
+            ExecutePerformanceTest(customerIds, orderIds, "100% loaded", false,(db) => { db.Customers.Include(z => z.Orders).ToArray(); });
+            ExecutePerformanceTest(customerIds, orderIds, "100% loaded", true, (db) => { db.Customers.Include(z => z.Orders).ToArray(); });
         }
 
         static void ExecuteOnNewDbContext(Action<MyDatabase> action)
@@ -72,7 +69,7 @@ namespace Demo
             }
         }
 
-        static void ExecuteTest(IdGenerator customers,
+        static void ExecutePerformanceTest(IdGenerator customers,
             IdGenerator orders,
             string title,
             bool withFinder,
