@@ -107,7 +107,12 @@ namespace Demo
                         Customer = customer,
                         Id = orderIds.Next(),
                     });
+                    // This is the case where EF can find the object
+                    // and our implementation cannot find it
+                    // but EF is slow because of this 'only' case.
                     Debug.Assert(finder.Find<Order>(orderIds.All().First()) == null);
+                    Debug.Assert(db.Orders.Find(orderIds.All().First()) != null);
+
                     db.SaveChanges();
                     Debug.Assert(finder.Find<Order>(orderIds.All().First()) != null);
                 }
