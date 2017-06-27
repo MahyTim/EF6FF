@@ -18,6 +18,8 @@ namespace Library
             objectContext.ObjectStateManager.ObjectStateManagerChanged += AddOrRemoveLoadedEntities;
         }
         private readonly Dictionary<Guid, IEntity> _loadedEntities = new Dictionary<Guid, IEntity>();
+        private readonly HashSet<Guid> _deletedEntities = new HashSet<Guid>();
+
         private void AddOrRemoveLoadedEntities(object sender, System.ComponentModel.CollectionChangeEventArgs e)
         {
             var entity = e.Element as IEntity;
@@ -33,10 +35,12 @@ namespace Library
                     {
                         _loadedEntities.Remove(entity.Id);
                     }
+                    _deletedEntities.Add(entity.Id);
                 }
                 else if (e.Action == CollectionChangeAction.Refresh)
                 {
                     _loadedEntities.Clear();
+                    _deletedEntities.Clear();
                 }
             }
         }
@@ -70,6 +74,8 @@ namespace Library
             {
                 return find;
             }
+            if (_deletedEntities.Contains(id))
+                return null;
             return FetchById<TEntity>(id);
         }
         private TEntity FetchById<TEntity>(Guid id) where TEntity : class, IEntity

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Core.Objects.DataClasses;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
@@ -12,15 +13,111 @@ namespace Demo
 {
     class Program
     {
-        
+
 
         static void Main(string[] args)
         {
+            FunctionalTest();
             PerformanceTest();
+        }
+
+        private static void FunctionalTest()
+        {
+            Console.WriteLine("Functional test");
+
+            {
+                // Object can be retreived after adding it to the DbContext
+                var customerIds = new IdGenerator();
+                using (var db = new MyDatabase())
+                {
+                    var finder = new FasterFind(db);
+                    db.Customers.Add(new Customer()
+                    {
+                        Id = customerIds.Next(),
+                        Name = "Some name",
+                        Orders = new List<Order>()
+                    });
+                    Debug.Assert(finder.Find<Customer>(customerIds.All().First()) != null);
+                    Debug.Assert(finder.Find<Order>(customerIds.All().First()) == null);
+                }
+            }
+
+            {
+                // Object cannot be retreived after deleting it from the DbContext
+                var customerIds = new IdGenerator();
+                using (var db = new MyDatabase())
+                {
+                    var finder = new FasterFind(db);
+                    var customer = db.Customers.Add(new Customer()
+                    {
+                        Id = customerIds.Next(),
+                        Name = "Some name",
+                        Orders = new List<Order>()
+                    });
+                    db.SaveChanges();
+                    db.Customers.Remove(customer);
+                    Debug.Assert(finder.Find<Customer>(customerIds.All().First()) == null);
+                    db.SaveChanges();
+                    Debug.Assert(finder.Find<Customer>(customerIds.All().First()) == null);
+                }
+            }
+
+            {
+                // Nested Object can be retrieved
+                var customerIds = new IdGenerator();
+                var orderIds = new IdGenerator();
+                using (var db = new MyDatabase())
+                {
+                    var finder = new FasterFind(db);
+                    var customer = db.Customers.Add(new Customer()
+                    {
+                        Id = customerIds.Next(),
+                        Name = "Some name",
+                        Orders = new List<Order>()
+                        {
+                            new Order()
+                            {
+                                Id =  orderIds.Next(),
+                            }
+                        }
+                    });
+                    Debug.Assert(finder.Find<Order>(orderIds.All().First()) != null);
+                    db.SaveChanges();
+                    Debug.Assert(finder.Find<Order>(orderIds.All().First()) != null);
+                }
+            }
+
+            {
+                // Nested Object can be retrieved - late bound
+                // WARNING THIS IS THE ONLY USE-CASE THAT THIS
+                // IMPLEMENTATION DOES NOT SUPPORT - UNLESS SAVED WITH SAVECHANGES
+                var customerIds = new IdGenerator();
+                var orderIds = new IdGenerator();
+                using (var db = new MyDatabase())
+                {
+                    var finder = new FasterFind(db);
+                    var customer = db.Customers.Add(new Customer()
+                    {
+                        Id = customerIds.Next(),
+                        Name = "Some name",
+                        Orders = new List<Order>()
+                    });
+                    customer.Orders.Add(new Order()
+                    {
+                        Customer = customer,
+                        Id = orderIds.Next(),
+                    });
+                    Debug.Assert(finder.Find<Order>(orderIds.All().First()) == null);
+                    db.SaveChanges();
+                    Debug.Assert(finder.Find<Order>(orderIds.All().First()) != null);
+                }
+            }
+
         }
 
         private static void PerformanceTest()
         {
+            Console.WriteLine("Performance test");
             var customerIds = new IdGenerator();
             var orderIds = new IdGenerator();
             using (var db = new MyDatabase())
@@ -57,7 +154,7 @@ namespace Demo
                 db.Customers.Take(customerIds.All().Count() / 2).ToArray();
                 db.Orders.Take(orderIds.All().Count() / 2).ToArray();
             });
-            ExecutePerformanceTest(customerIds, orderIds, "100% loaded", false,(db) => { db.Customers.Include(z => z.Orders).ToArray(); });
+            ExecutePerformanceTest(customerIds, orderIds, "100% loaded", false, (db) => { db.Customers.Include(z => z.Orders).ToArray(); });
             ExecutePerformanceTest(customerIds, orderIds, "100% loaded", true, (db) => { db.Customers.Include(z => z.Orders).ToArray(); });
         }
 
